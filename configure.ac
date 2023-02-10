@@ -83,8 +83,8 @@ PKG_CHECK_EXISTS([libev], [
 		[AC_MSG_ERROR([Cannot find libev.])])
 ])
 
-PKG_CHECK_MODULES([SSL], [libssl])
-PKG_CHECK_MODULES([CRYPTO], [libcrypto])
+PKG_CHECK_MODULES([SSL], [libwolfssl])
+#PKG_CHECK_MODULES([CRYPTO], [libcrypto])
 HITCH_SEARCH_LIBS([SOCKET], [socket], [socket])
 HITCH_SEARCH_LIBS([NSL], [nsl], [inet_ntop])
 HITCH_SEARCH_LIBS([RT], [rt], [clock_gettime])
@@ -196,21 +196,21 @@ HITCH_CHECK_FUNC([SSL_CTX_get_default_passwd_cb_userdata], [$SSL_LIBS], [
 		[OpenSSL has SSL_CTX_get_default_passwd_cb_userdata()])
 ])
 
-HITCH_CHECK_FUNC([CRYPTO_get_locking_callback], [$CRYPTO_LIBS], [
+HITCH_CHECK_FUNC([CRYPTO_get_locking_callback], [$SSL_LIBS], [
 	AC_DEFINE([OPENSSL_WITH_LOCKS], [1], [OpenSSL needs explicit locking])
 ])
 
-HITCH_CHECK_FUNC([X509_NAME_ENTRY_get_data], [$CRYPTO_LIBS], [
+HITCH_CHECK_FUNC([X509_NAME_ENTRY_get_data], [$SSL_LIBS], [
 	AC_DEFINE([HAVE_X509_NAME_ENTRY_GET_DATA], [1],
 		[OpenSSL has X509_NAME_ENTRY_get_data()])
 ])
 
-HITCH_CHECK_FUNC([X509_STORE_get0_objects], [$CRYPTO_LIBS], [
+HITCH_CHECK_FUNC([X509_STORE_get0_objects], [$SSL_LIBS], [
 	AC_DEFINE([HAVE_X509_STORE_GET0_OBJECTS], [1],
 		[OpenSSL has X509_STORE_get0_objects()])
 ])
 
-HITCH_CHECK_FUNC([X509_OBJECT_get0_X509], [$CRYPTO_LIBS], [
+HITCH_CHECK_FUNC([X509_OBJECT_get0_X509], [$SSL_LIBS], [
 	AC_DEFINE([HAVE_X509_OBJECT_GET0_X509], [1],
 		[OpenSSL has X509_OBJECT_get0_X509()])
 ])
@@ -223,6 +223,23 @@ AS_VERSION_COMPARE([$($PKG_CONFIG --modversion openssl)], [1.1.1],
 
 AS_IF([test "x$openssl111" = xyes],
 	[AC_DEFINE([HAVE_TLS_1_3], [1], [Define to 1 if TLSv1.3 is available])], [])
+
+# wolfSSL supports TLS 1.3.  TODO: conditionalize this on wolfSSL
+AC_DEFINE([HAVE_TLS_1_3], [1], [Define to 1 if TLSv1.3 is available])
+AC_DEFINE([OPENSSL_WITH_ALPN], [1], [wolfSSL supports ALPN])
+AC_DEFINE([OPENSSL_WITH_NPN], [1], [wolfSSL supports NPN])
+AC_DEFINE([HAVE_SSL_CTX_GET_DEFAULT_PASSWD_CB], [1],
+	[wolfSSL has SSL_CTX_get_default_passwd_cb()])
+AC_DEFINE([HAVE_SSL_CTX_GET_DEFAULT_PASSWD_CB_USERDATA], [1],
+	[wolfSSL has SSL_CTX_get_default_passwd_cb_userdata()])
+# TODO: Add CRYPTO_get_locking_callback, we do support set, just not get.
+#AC_DEFINE([OPENSSL_WITH_LOCKS], [1], [wolfSSL needs explicit locking])
+AC_DEFINE([HAVE_X509_NAME_ENTRY_GET_DATA], [1],
+	[wolfSSL has X509_NAME_ENTRY_get_data()])
+AC_DEFINE([HAVE_X509_STORE_GET0_OBJECTS], [1],
+	[wolfSSL has X509_STORE_get0_objects()])
+AC_DEFINE([HAVE_X509_OBJECT_GET0_X509], [1],
+	[wolfSSL has X509_OBJECT_get0_X509()])
 
 SH_TESTS="$(cd $srcdir/src && echo tests/test*.sh)"
 AC_SUBST(SH_TESTS)

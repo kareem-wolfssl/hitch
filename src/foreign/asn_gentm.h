@@ -29,6 +29,7 @@
  *
  */
 
+#include <wolfssl/options.h>
 #include <openssl/asn1.h>
 
 double

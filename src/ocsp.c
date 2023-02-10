@@ -547,7 +547,11 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 {
 	ocspquery *oq;
 	OCSP_REQUEST *req = NULL;
+#ifndef WITH_WOLFSSL
 	OCSP_REQ_CTX *rctx = NULL;
+#else
+	unsigned char* reqBuf, httpBuf;
+#endif
 	STACK_OF(OPENSSL_STRING) *sk_uri;
 	char *host = NULL, *port = NULL, *path = NULL;
 	int https = 0;
@@ -580,8 +584,8 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 		goto err;
 	}
 
-	/* printf("host: %s port: %s path: %s ssl: %d\n", */
-	/*     host, port, path, https); */
+	printf("host: %s port: %s path: %s ssl: %d\n", 
+	     host, port, path, https);
 
 	cbio = BIO_new_connect(host);
 	if (cbio == NULL) {
@@ -647,27 +651,89 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 		}
 	}
 
+#ifdef WITH_WOLFSSL
+	FREE_OBJ(oq);
+	goto err;
+#if 0
+	/* TODO: OCSP support */
+
+	/* Get size */
+    n = wolfSSL_i2d_OCSP_REQUEST(req, NULL);
+    if (n < 0) {
+		/* If we weren't able to create a request, there is no
+		 * use in scheduling a retry. */
+		FREE_OBJ(oq);
+		goto err;
+	}
+
+	reqBuf = (unsigned char*) malloc(n);
+    if (reqBuf == NULL) {
+		FREE_OBJ(oq);
+        goto err;
+    }
+	n = wolfSSL_i2d_OCSP_REQUEST(req, &reqBuf);
+	if (n < 0) {
+		FREE_OBJ(oq);
+		goto err;
+	}
+	n = wolfIO_HttpBuildRequestOcsp(host, path, n, &httpBuf, 4096);
+	if (wolfIO_Send(fd, (char*)&httpBuf, n, 0) !=
+														n) {
+		printf("OCSP http request failed\n");
+	}
+	else if (wolfIO_Send(fd, (char*)reqBuf, ocspReqSz, 0) !=
+														ocspReqSz) {
+		printf("OCSP ocsp request failed\n");
+	}
+	else {
+		do {
+			n = wolfIO_HttpProcessResponseOcsp(fd, ocspRespBuf, 
+							httpBuf, HTTP_SCRATCH_BUFFER_SIZE, NULL);
+			nonBlockCnt++;
+			if (ret == OCSP_WANT_READ)
+				return WOLFSSL_CBIO_ERR_WANT_READ;
+		} while (ret == OCSP_WANT_READ);
+		printf("OCSP Response: ret %d, nonblock count %d\n", 
+			ret, nonBlockCnt);
+	}
+#endif
+#else
+	// path sets path in req.  NULL req + 0 buf_size.  default value of 4KiB response header max size.  BIO is connected to host, path is URL path (hostname is in host)
 	rctx = OCSP_sendreq_new(cbio, path, NULL, 0);
 	if (rctx == NULL) {
 		ERR("{ocsp} OCSP_sendreq_new failed\n");
 		refresh_hint = 60;
 		goto retry;
 	}
+	// wolfSSL: domain name, will add host header automatically
 	if (OCSP_REQ_CTX_add1_header(rctx, "Host", host) == 0) {
 		ERR("{ocsp} OCSP_REQ_CTX_add1_header failed\n");
 		refresh_hint = 60;
 		goto retry;
 	}
+	/*OSSL_HTTP_REQ_CTX_set1_req(rctx, "application/ocsp-request",
+                           ASN1_ITEM_rptr(OCSP_REQUEST),
+                           (const ASN1_VALUE *)req)
+	*/
 	if (OCSP_REQ_CTX_set1_req(rctx, req) == 0) {
 		ERR("{ocsp} OCSP_REQ_CTX_set1_req failed\n");
 		refresh_hint = 60;
 		goto retry;
 	}
+#endif
 
 	resp_tmo = Time_now() + CONFIG->OCSP_RESP_TMO;
 	while (1) {
 		double tnow;
+#ifdef WITH_WOLFSSL
+#if 0
+		n = wolfIO_HttpProcessResponseOcsp(fd, &respBuf, 
+							httpBuf, 4096, NULL);
+#endif
+#else
+		// sends request, gathers response.  1 on success, -1 on retry needed, 0 on error
 		n = OCSP_sendreq_nbio(&resp, rctx);
+#endif
 		if (n == 0) {
 			/* this is an error, and we can't continue */
 			ERR("{ocsp} OCSP_sendreq_nbio failed for %s:%s.\n",
@@ -736,8 +802,10 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 retry:
 	HOCSP_mktask(oq->sctx, oq, refresh_hint);
 err:
+#ifndef WITH_WOLFSSL
 	if (rctx)
 		OCSP_REQ_CTX_free(rctx);
+#endif
 	if (req)
 		OCSP_REQUEST_free(req);
 	if (resp)

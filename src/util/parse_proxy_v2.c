@@ -45,6 +45,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <wolfssl/options.h>
 #include <openssl/opensslv.h>
 
 #include "proxyv2.h"

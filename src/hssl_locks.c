@@ -29,6 +29,7 @@
  */
 
 #include <pthread.h>
+#include <wolfssl/options.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/crypto.h>
