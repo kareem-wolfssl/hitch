@@ -549,7 +549,7 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 	OCSP_REQUEST *req = NULL;
 #ifndef WITH_WOLFSSL
 	OCSP_REQ_CTX *rctx = NULL;
-#else
+#elif 0
 	unsigned char* reqBuf, httpBuf;
 #endif
 	STACK_OF(OPENSSL_STRING) *sk_uri;

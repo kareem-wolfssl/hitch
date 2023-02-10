@@ -232,8 +232,7 @@ AC_DEFINE([HAVE_SSL_CTX_GET_DEFAULT_PASSWD_CB], [1],
 	[wolfSSL has SSL_CTX_get_default_passwd_cb()])
 AC_DEFINE([HAVE_SSL_CTX_GET_DEFAULT_PASSWD_CB_USERDATA], [1],
 	[wolfSSL has SSL_CTX_get_default_passwd_cb_userdata()])
-# TODO: Add CRYPTO_get_locking_callback, we do support set, just not get.
-#AC_DEFINE([OPENSSL_WITH_LOCKS], [1], [wolfSSL needs explicit locking])
+AC_DEFINE([OPENSSL_WITH_LOCKS], [1], [wolfSSL needs explicit locking])
 AC_DEFINE([HAVE_X509_NAME_ENTRY_GET_DATA], [1],
 	[wolfSSL has X509_NAME_ENTRY_get_data()])
 AC_DEFINE([HAVE_X509_STORE_GET0_OBJECTS], [1],
