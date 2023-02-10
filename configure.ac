@@ -83,8 +83,24 @@ PKG_CHECK_EXISTS([libev], [
 		[AC_MSG_ERROR([Cannot find libev.])])
 ])
 
-PKG_CHECK_MODULES([SSL], [libssl])
-PKG_CHECK_MODULES([CRYPTO], [libcrypto])
+AC_ARG_WITH([wolfssl],
+	AS_HELP_STRING([--with-wolfssl], [Build with wolfssl]),
+	[
+	if test "$withval" = yes
+	then
+		wolfssl_path=/usr/local
+	else
+		wolfssl_path=$withval
+	fi
+	], [with_wolfssl=no])
+
+if test "$with_wolfssl" != no
+then
+	PKG_CHECK_MODULES([SSL], [wolfssl])
+else
+	PKG_CHECK_MODULES([SSL], [libssl])
+	PKG_CHECK_MODULES([CRYPTO], [libcrypto])
+fi
 HITCH_SEARCH_LIBS([SOCKET], [socket], [socket])
 HITCH_SEARCH_LIBS([NSL], [nsl], [inet_ntop])
 HITCH_SEARCH_LIBS([RT], [rt], [clock_gettime])
@@ -178,51 +194,75 @@ fi
 AC_CHECK_HEADERS([linux/futex.h])
 AM_CONDITIONAL([HAVE_LINUX_FUTEX], [test $ac_cv_header_linux_futex_h = yes])
 
-HITCH_CHECK_FUNC([SSL_get0_alpn_selected], [$SSL_LIBS], [
-	AC_DEFINE([OPENSSL_WITH_ALPN], [1], [OpenSSL supports ALPN])
-])
-
-HITCH_CHECK_FUNC([SSL_get0_next_proto_negotiated], [$SSL_LIBS], [
-	AC_DEFINE([OPENSSL_WITH_NPN], [1], [OpenSSL supports NPN])
-])
-
-HITCH_CHECK_FUNC([SSL_CTX_get_default_passwd_cb], [$SSL_LIBS], [
+if test "$with_wolfssl" != no
+then
+	AC_DEFINE([WITH_WOLFSSL], [1], [Hitch is being built with wolfSSL])
+	AC_DEFINE([HAVE_TLS_1_3], [1], [Define to 1 if TLSv1.3 is available])
+	AC_DEFINE([OPENSSL_WITH_ALPN], [1], [wolfSSL supports ALPN])
 	AC_DEFINE([HAVE_SSL_CTX_GET_DEFAULT_PASSWD_CB], [1],
-		[OpenSSL has SSL_CTX_get_default_passwd_cb()])
-])
-
-HITCH_CHECK_FUNC([SSL_CTX_get_default_passwd_cb_userdata], [$SSL_LIBS], [
+		[wolfSSL has SSL_CTX_get_default_passwd_cb()])
 	AC_DEFINE([HAVE_SSL_CTX_GET_DEFAULT_PASSWD_CB_USERDATA], [1],
-		[OpenSSL has SSL_CTX_get_default_passwd_cb_userdata()])
-])
-
-HITCH_CHECK_FUNC([CRYPTO_get_locking_callback], [$CRYPTO_LIBS], [
-	AC_DEFINE([OPENSSL_WITH_LOCKS], [1], [OpenSSL needs explicit locking])
-])
-
-HITCH_CHECK_FUNC([X509_NAME_ENTRY_get_data], [$CRYPTO_LIBS], [
+		[wolfSSL has SSL_CTX_get_default_passwd_cb_userdata()])
+	AC_DEFINE([OPENSSL_WITH_LOCKS], [1], [wolfSSL needs explicit locking])
 	AC_DEFINE([HAVE_X509_NAME_ENTRY_GET_DATA], [1],
-		[OpenSSL has X509_NAME_ENTRY_get_data()])
-])
-
-HITCH_CHECK_FUNC([X509_STORE_get0_objects], [$CRYPTO_LIBS], [
+		[wolfSSL has X509_NAME_ENTRY_get_data()])
 	AC_DEFINE([HAVE_X509_STORE_GET0_OBJECTS], [1],
-		[OpenSSL has X509_STORE_get0_objects()])
-])
-
-HITCH_CHECK_FUNC([X509_OBJECT_get0_X509], [$CRYPTO_LIBS], [
+		[wolfSSL has X509_STORE_get0_objects()])
 	AC_DEFINE([HAVE_X509_OBJECT_GET0_X509], [1],
-		[OpenSSL has X509_OBJECT_get0_X509()])
-])
+		[wolfSSL has X509_OBJECT_get0_X509()])
 
-AC_CHECK_MEMBERS([struct ssl_st.s3], [], [], [[#include <openssl/ssl.h>]])
+		HITCH_CHECK_FLAGS([HITCH_CFLAGS], [
+		-I$wolfssl_path/include,
+		-I$wolfssl_path/include/wolfssl,
+		-DEXTERNAL_OPTS_OPENVPN
+	])
+else
+	HITCH_CHECK_FUNC([SSL_get0_alpn_selected], [$SSL_LIBS], [
+		AC_DEFINE([OPENSSL_WITH_ALPN], [1], [OpenSSL supports ALPN])
+	])
 
-AS_VERSION_COMPARE([$($PKG_CONFIG --modversion openssl)], [1.1.1],
-	[openssl111=no],
-	[openssl111=yes], [openssl111=yes])
+	HITCH_CHECK_FUNC([SSL_get0_next_proto_negotiated], [$SSL_LIBS], [
+		AC_DEFINE([OPENSSL_WITH_NPN], [1], [OpenSSL supports NPN])
+	])
 
-AS_IF([test "x$openssl111" = xyes],
-	[AC_DEFINE([HAVE_TLS_1_3], [1], [Define to 1 if TLSv1.3 is available])], [])
+	HITCH_CHECK_FUNC([SSL_CTX_get_default_passwd_cb], [$SSL_LIBS], [
+		AC_DEFINE([HAVE_SSL_CTX_GET_DEFAULT_PASSWD_CB], [1],
+			[OpenSSL has SSL_CTX_get_default_passwd_cb()])
+	])
+
+	HITCH_CHECK_FUNC([SSL_CTX_get_default_passwd_cb_userdata], [$SSL_LIBS], [
+		AC_DEFINE([HAVE_SSL_CTX_GET_DEFAULT_PASSWD_CB_USERDATA], [1],
+			[OpenSSL has SSL_CTX_get_default_passwd_cb_userdata()])
+	])
+
+	HITCH_CHECK_FUNC([CRYPTO_get_locking_callback], [$CRYPTO_LIBS], [
+		AC_DEFINE([OPENSSL_WITH_LOCKS], [1], [OpenSSL needs explicit locking])
+	])
+
+	HITCH_CHECK_FUNC([X509_NAME_ENTRY_get_data], [$CRYPTO_LIBS], [
+		AC_DEFINE([HAVE_X509_NAME_ENTRY_GET_DATA], [1],
+			[OpenSSL has X509_NAME_ENTRY_get_data()])
+	])
+
+	HITCH_CHECK_FUNC([X509_STORE_get0_objects], [$CRYPTO_LIBS], [
+		AC_DEFINE([HAVE_X509_STORE_GET0_OBJECTS], [1],
+			[OpenSSL has X509_STORE_get0_objects()])
+	])
+
+	HITCH_CHECK_FUNC([X509_OBJECT_get0_X509], [$CRYPTO_LIBS], [
+		AC_DEFINE([HAVE_X509_OBJECT_GET0_X509], [1],
+			[OpenSSL has X509_OBJECT_get0_X509()])
+	])
+
+	AC_CHECK_MEMBERS([struct ssl_st.s3], [], [], [[#include <openssl/ssl.h>]])
+
+	AS_VERSION_COMPARE([$($PKG_CONFIG --modversion openssl)], [1.1.1],
+		[openssl111=no],
+		[openssl111=yes], [openssl111=yes])
+
+	AS_IF([test "x$openssl111" = xyes],
+		[AC_DEFINE([HAVE_TLS_1_3], [1], [Define to 1 if TLSv1.3 is available])], [])
+fi
 
 SH_TESTS="$(cd $srcdir/src && echo tests/test*.sh)"
 AC_SUBST(SH_TESTS)

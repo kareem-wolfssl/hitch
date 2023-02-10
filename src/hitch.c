@@ -36,7 +36,6 @@
   */
 
 #include "config.h"
-
 #include <openssl/x509.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/engine.h>
@@ -1325,6 +1324,7 @@ init_openssl(void)
 	SSL_load_error_strings();
 	OpenSSL_add_all_digests();
 
+#ifndef WITH_WOLFSSL
 	if (CONFIG->ENGINE) {
 		ENGINE *e = NULL;
 		ENGINE_load_builtin_engines();
@@ -1345,6 +1345,7 @@ init_openssl(void)
 			ENGINE_free(e);
 		}
 	}
+#endif
 }
 
 static void
@@ -2034,7 +2035,7 @@ proxy_tlv_cert(struct proxystate *ps, char *dst, ssize_t dstlen)
 {
 	X509 *crt;
 	BIO *bio;
-	struct buf_mem_st bm[1];
+	BUF_MEM bm[1];
 
 	crt = SSL_get_peer_certificate(ps->ssl);
 	if (crt == NULL)

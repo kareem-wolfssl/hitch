@@ -85,20 +85,20 @@ HOCSP_verify(sslctx *sc, OCSP_RESPONSE *resp, double *nextupd)
 	br = OCSP_response_get1_basic(resp);
 	if (br == NULL) {
 		ERR("{core} OCSP_response_get1_basic failed (cert: %s)\n",
-		    sc->filename);
+			sc->filename);
 		goto err;
 	}
 	i = OCSP_basic_verify(br, chain, store, verify_flags);
 	if (i <= 0) {
 		log_ssl_error(NULL, "{core} Staple verification failed "
-		    "for cert %s\n", sc->filename);
+			"for cert %s\n", sc->filename);
 		goto err;
 	}
 
 	issuer = Find_issuer(sc->x509, chain);
 	if (issuer == NULL) {
 		ERR("{core} Unable to find issuer for cert %s\n.",
-		    sc->filename);
+			sc->filename);
 		goto err;
 	}
 
@@ -111,16 +111,16 @@ HOCSP_verify(sslctx *sc, OCSP_RESPONSE *resp, double *nextupd)
 	if (OCSP_resp_find_status(br, cid, &status, &reason,
 		NULL, NULL, &asn_nextupd) != 1) {
 		ERR("{core} OCSP_resp_find_status failed: Unable to "
-		    "find OCSP response with a matching certificate id\n");
+			"find OCSP response with a matching certificate id\n");
 		goto err;
 	}
 
 	if (status != V_OCSP_CERTSTATUS_GOOD) {
 		ERR("{core} Certificate %s has status %s\n", sc->filename,
-		    OCSP_cert_status_str(status));
+			OCSP_cert_status_str(status));
 		if (status == V_OCSP_CERTSTATUS_REVOKED)
 			ERR("{core} Certificate %s revocation reason: %s\n",
-			    sc->filename, OCSP_crl_reason_str(reason));
+				sc->filename, OCSP_crl_reason_str(reason));
 		goto err;
 	}
 
@@ -151,7 +151,7 @@ HOCSP_staple_cb(SSL *ssl, void *priv)
 	CAST_OBJ_NOTNULL(staple, priv, SSLSTAPLE_MAGIC);
 
 	if (staple->nextupd != -1 &&
-	    staple->nextupd < Time_now()) {
+		staple->nextupd < Time_now()) {
 		return (SSL_TLSEXT_ERR_NOACK);
 	}
 
@@ -182,7 +182,7 @@ HOCSP_init_resp(sslctx *sc, OCSP_RESPONSE *resp)
 	i = OCSP_response_status(resp);
 	if (i != OCSP_RESPONSE_STATUS_SUCCESSFUL) {
 		ERR("{core} Error: OCSP response for cert %s has status %s\n",
-		    sc->filename, OCSP_response_status_str(i));
+			sc->filename, OCSP_response_status_str(i));
 		goto err;
 	}
 
@@ -248,7 +248,7 @@ hocsp_stat_cb(struct ev_loop *loop, ev_stat *w, int revents)
 
 		HOCSP_free(&oldstaple);
 		LOG("{core} Loaded cached OCSP staple for cert '%s'\n",
-		    sc->filename);
+			sc->filename);
 	}
 }
 
@@ -300,14 +300,14 @@ hocsp_mkreq(ocspquery *oq)
 	issuer = Find_issuer(oq->sctx->x509, chain);
 	if (issuer == NULL) {
 		ERR("{ocsp} Unable to find issuer for cert %s\n.",
-		    oq->sctx->filename);
+			oq->sctx->filename);
 		return (NULL);
 	}
 
 	cid = OCSP_cert_to_id(NULL, oq->sctx->x509, issuer);
 	if (cid == NULL) {
 		ERR("{ocsp} OCSP_cert_to_id failed for cert %s\n",
-		    oq->sctx->filename);
+			oq->sctx->filename);
 		return (NULL);
 	}
 
@@ -354,11 +354,11 @@ hocsp_proc_persist(sslctx *sc)
 	if (fd < 0) {
 		if (errno == EACCES)
 			ERR("{ocsp} Error: ocsp-dir '%s' is not "
-			    "writable for the configured user\n",
-			    CONFIG->OCSP_DIR);
+				"writable for the configured user\n",
+				CONFIG->OCSP_DIR);
 		else
 			ERR("{ocsp} hocsp_proc_persist: mkstemp: %s: %s\n",
-			    VSB_data(tmpfn), strerror(errno));
+				VSB_data(tmpfn), strerror(errno));
 		goto err;
 	}
 
@@ -375,7 +375,7 @@ hocsp_proc_persist(sslctx *sc)
 
 	if (rename(VSB_data(tmpfn), dstfile) != 0) {
 		ERR("{ocsp} hocsp_proc_persist: rename: %s: %s\n",
-		    strerror(errno), dstfile);
+			strerror(errno), dstfile);
 		goto err;
 	}
 
@@ -511,7 +511,7 @@ HOCSP_mktask(sslctx *sc, ocspquery *oq, double refresh_hint)
 		sk_uri = X509_get1_ocsp(sc->x509);
 		if (sk_uri == NULL || sk_OPENSSL_STRING_num(sk_uri) == 0) {
 			LOG("{ocsp} Note: No OCSP responder URI found "
-			    "for cert %s\n", sc->filename);
+				"for cert %s\n", sc->filename);
 			if (sk_uri != NULL)
 				X509_email_free(sk_uri);
 			return;
@@ -532,12 +532,12 @@ HOCSP_mktask(sslctx *sc, ocspquery *oq, double refresh_hint)
 
 	assert(refresh >= 0.0);
 	ev_timer_init(&oq->ev_t_refresh,
-	    hocsp_query_responder, refresh, 0.);
+		hocsp_query_responder, refresh, 0.);
 	oq->ev_t_refresh.data = oq;
 	ev_timer_start(loop, &oq->ev_t_refresh);
 
 	LOG("{ocsp} Refresh of OCSP staple for %s scheduled in "
-	    "%.0lf seconds\n", sc->filename, refresh);
+		"%.0lf seconds\n", sc->filename, refresh);
 }
 
 
@@ -547,7 +547,12 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 {
 	ocspquery *oq;
 	OCSP_REQUEST *req = NULL;
+#ifndef WITH_WOLFSSL
 	OCSP_REQ_CTX *rctx = NULL;
+#else
+	unsigned char *httpBuf = NULL, *reqBuf = NULL, *respBuf = NULL;
+	int httpBufSz = 4096, reqSz = 0, respSz = 4096;
+#endif
 	STACK_OF(OPENSSL_STRING) *sk_uri;
 	char *host = NULL, *port = NULL, *path = NULL;
 	int https = 0;
@@ -633,20 +638,44 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 		if (n == 0) {
 			/* connect timeout */
 			ERR("{ocsp} Error: Connection to %s:%s timed out. "
-			    "Hit parameter 'ocsp-connect-tmo"
-			    " [current value: %.3fs]\n",
-			    host, port, CONFIG->OCSP_CONN_TMO);
+				"Hit parameter 'ocsp-connect-tmo"
+				" [current value: %.3fs]\n",
+				host, port, CONFIG->OCSP_CONN_TMO);
 			refresh_hint = 300;
 			goto retry;
 		} else if (n < 0) {
 			ERR("{ocsp} Error: Connecting to %s:%s failed: "
-			    "select: %s\n",
-			    host, port, strerror(errno));
+				"select: %s\n",
+				host, port, strerror(errno));
 			refresh_hint = 300;
 			goto retry;
 		}
 	}
 
+#ifdef WITH_WOLFSSL
+	/* Get request size */
+	reqSz = wolfSSL_i2d_OCSP_REQUEST(req, NULL);
+	if (reqSz < 0) {
+		goto err;
+	}
+
+	reqBuf = (unsigned char*) malloc(reqSz);
+	if (reqBuf == NULL) {
+		goto err;
+	}
+	n = wolfSSL_i2d_OCSP_REQUEST(req, &reqBuf);
+	if (n < 0) {
+		goto err;
+	}
+	httpBuf = (unsigned char*) malloc(httpBufSz);
+	if (httpBuf == NULL) {
+		goto err;
+	}
+	httpBufSz = wolfIO_HttpBuildRequestOcsp(host, path, n, httpBuf, httpBufSz);
+	if (httpBufSz <= 0) {
+		goto err;
+	}
+#else
 	rctx = OCSP_sendreq_new(cbio, path, NULL, 0);
 	if (rctx == NULL) {
 		ERR("{ocsp} OCSP_sendreq_new failed\n");
@@ -663,15 +692,37 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 		refresh_hint = 60;
 		goto retry;
 	}
+#endif
 
 	resp_tmo = Time_now() + CONFIG->OCSP_RESP_TMO;
 	while (1) {
 		double tnow;
+#ifdef WITH_WOLFSSL
+		if (wolfIO_Send(fd, (char*)&httpBuf, httpBufSz, 0) != httpBufSz) {
+			goto err;
+		}
+		else if (wolfIO_Send(fd, (char*)&reqBuf, reqSz, 0) != reqSz) {
+			goto err;
+		}
+		respBuf = (unsigned char*) malloc(respSz);
+		if (respBuf == NULL) {
+			goto err;
+		}
+		respSz = wolfIO_HttpProcessResponseOcsp(fd, &respBuf, httpBuf, respSz, NULL);
+		/* Translate to match OCSP_sendreq_nbio's return code behavior */
+		if (respSz == OCSP_WANT_READ)
+			n = -1;
+		else if (respSz <= 0)
+			n = 0;
+		else
+			n = 1;
+#else
 		n = OCSP_sendreq_nbio(&resp, rctx);
+#endif
 		if (n == 0) {
 			/* this is an error, and we can't continue */
 			ERR("{ocsp} OCSP_sendreq_nbio failed for %s:%s.\n",
-			    host, port);
+				host, port);
 			refresh_hint = 300;
 			goto retry;
 		} else if (n == 1) {
@@ -700,7 +751,7 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 			if (errno == EINTR)
 				continue;
 			ERR("{ocsp} Error: Transmission failed:"
-			    " select: %s\n", strerror(errno));
+				" select: %s\n", strerror(errno));
 			refresh_hint = 300;
 			goto retry;
 		}
@@ -708,13 +759,17 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 		if (n == 0) {
 			/* timeout */
 			ERR("{ocsp} Error: Transmission timeout for %s:%s. "
-			    "Consider increasing parameter 'ocsp-resp-tmo'"
-			    " [current value: %.3fs]\n",
-			    host, port, CONFIG->OCSP_RESP_TMO);
+				"Consider increasing parameter 'ocsp-resp-tmo'"
+				" [current value: %.3fs]\n",
+				host, port, CONFIG->OCSP_RESP_TMO);
 			refresh_hint = 300;
 			goto retry;
 		}
 	}
+
+#ifdef WITH_WOLFSSL
+	resp = wolfSSL_d2i_OCSP_RESPONSE(NULL, (const unsigned char**) &respBuf, respSz);
+#endif
 
 	if (resp == NULL) {
 		/* fetch failed.  Retry later. */
@@ -722,7 +777,7 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 	} else {
 		if (HOCSP_init_resp(oq->sctx, resp) == 0) {
 			LOG("{ocsp} Retrieved new staple for cert %s\n",
-			    oq->sctx->filename);
+				oq->sctx->filename);
 			if (hocsp_proc_persist(oq->sctx) != 0) {
 				refresh_hint = 300;
 				goto retry;
@@ -736,8 +791,17 @@ hocsp_query_responder(struct ev_loop *loop, ev_timer *w, int revents)
 retry:
 	HOCSP_mktask(oq->sctx, oq, refresh_hint);
 err:
+#ifndef WITH_WOLFSSL
 	if (rctx)
 		OCSP_REQ_CTX_free(rctx);
+#else
+	if (httpBuf)
+		free(httpBuf);
+	if (reqBuf)
+		free(reqBuf);
+	if (respBuf)
+		free(respBuf);
+#endif
 	if (req)
 		OCSP_REQUEST_free(req);
 	if (resp)
