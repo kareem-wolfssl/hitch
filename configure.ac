@@ -227,7 +227,6 @@ AS_IF([test "x$openssl111" = xyes],
 # wolfSSL supports TLS 1.3.  TODO: conditionalize this on wolfSSL
 AC_DEFINE([HAVE_TLS_1_3], [1], [Define to 1 if TLSv1.3 is available])
 AC_DEFINE([OPENSSL_WITH_ALPN], [1], [wolfSSL supports ALPN])
-AC_DEFINE([OPENSSL_WITH_NPN], [1], [wolfSSL supports NPN])
 AC_DEFINE([HAVE_SSL_CTX_GET_DEFAULT_PASSWD_CB], [1],
 	[wolfSSL has SSL_CTX_get_default_passwd_cb()])
 AC_DEFINE([HAVE_SSL_CTX_GET_DEFAULT_PASSWD_CB_USERDATA], [1],
