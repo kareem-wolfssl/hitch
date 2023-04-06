@@ -9,7 +9,6 @@
 #define CONFIGURATION_H_INCLUDED
 
 #include <sys/types.h>
-#include <wolfssl/options.h>
 #include <openssl/ssl.h>
 
 #include "foreign/uthash.h"

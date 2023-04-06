@@ -10,7 +10,6 @@
 #ifndef SHCTX_H
 #define SHCTX_H
 
-#include <wolfssl/options.h>
 #include <openssl/ssl.h>
 #include <stdint.h>
 

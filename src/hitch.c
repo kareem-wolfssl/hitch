@@ -36,9 +36,6 @@
   */
 
 #include "config.h"
-
-#include <wolfssl/options.h>
-#include <openssl/ssl.h>
 #include <openssl/x509.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/engine.h>
@@ -1323,7 +1320,6 @@ find_ctx(const char *file)
 void
 init_openssl(void)
 {
-	wolfSSL_Debugging_ON();
 	SSL_library_init();
 	SSL_load_error_strings();
 	OpenSSL_add_all_digests();

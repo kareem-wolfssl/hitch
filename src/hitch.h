@@ -41,7 +41,6 @@
 #include <syslog.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <wolfssl/options.h>
 #include <openssl/asn1.h>
 #include <openssl/engine.h>
 #include <openssl/evp.h>

@@ -14,7 +14,6 @@
 
 #include <stdio.h>
 #include <time.h>
-#include <wolfssl/options.h>
 #include <openssl/asn1.h>
 
 /*
